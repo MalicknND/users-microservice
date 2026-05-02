@@ -40,9 +40,4 @@ public class UsersMicroserviceApplication {
 
  */
 
-    @Bean
-    BCryptPasswordEncoder getBCE() {
-        return new BCryptPasswordEncoder();
-    }
-
 }
