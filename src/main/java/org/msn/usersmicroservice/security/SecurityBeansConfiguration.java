@@ -6,6 +6,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+// cette classe sert à définir des beans Spring liés à la sécurité (authentification, encodage des mots de passe, etc.)
 @Configuration // indique que cette classe sert à définir des beans Spring
 public class SecurityBeansConfiguration {
 

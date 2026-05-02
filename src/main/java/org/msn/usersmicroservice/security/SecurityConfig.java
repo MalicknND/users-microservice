@@ -8,7 +8,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+
+// cette classe sert à définir la configuration de sécurité de l'application (quelles routes sont protégées, comment gérer les sessions, etc.)
 @Configuration // indique que cette classe contient une configuration Spring
 @EnableWebSecurity // active Spring Security dans l'application
 public class SecurityConfig {
@@ -39,7 +42,9 @@ public class SecurityConfig {
 
                                 .anyRequest().authenticated()
                         // 👉 toutes les autres routes nécessitent une authentification
-                );
+                )
+                .addFilterBefore(new JWTAuthenticationFilter(authenticationManager), UsernamePasswordAuthenticationFilter.class);
+
 
         // 🔹 construit et retourne la configuration de sécurité
         return http.build();
