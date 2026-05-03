@@ -8,7 +8,7 @@
         <version>3.2.1</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.nadhem</groupId>
+    <groupId>org.msn</groupId>
     <artifactId>users-microservice</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>users-microservice</name>
