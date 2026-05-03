@@ -43,7 +43,8 @@ public class SecurityConfig {
                                 .anyRequest().authenticated()
                         // 👉 toutes les autres routes nécessitent une authentification
                 )
-                .addFilterBefore(new JWTAuthenticationFilter(authenticationManager), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JWTAuthenticationFilter(authenticationManager), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new JWTAuthorizationFilter(), UsernamePasswordAuthenticationFilter.class);
 
 
         // 🔹 construit et retourne la configuration de sécurité
