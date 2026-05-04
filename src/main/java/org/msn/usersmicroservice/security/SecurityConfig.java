@@ -1,54 +1,71 @@
 package org.msn.usersmicroservice.security;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Autowired; // ✅ AJOUT
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager; // ✅ AJOUT
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
 
+import java.util.Collections;
 
-// cette classe sert à définir la configuration de sécurité de l'application (quelles routes sont protégées, comment gérer les sessions, etc.)
-@Configuration // indique que cette classe contient une configuration Spring
-@EnableWebSecurity // active Spring Security dans l'application
+@Configuration
+@EnableWebSecurity
 public class SecurityConfig {
 
     @Autowired
-    AuthenticationManager authenticationManager;
-    // injection du moteur d'authentification (utilisé pour login plus tard)
+    private AuthenticationManager authenticationManager;
+    // ✅ AJOUT : nécessaire pour gérer le login (authentification)
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain (HttpSecurity http) throws Exception
+    {
+        http.sessionManagement( session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .csrf(AbstractHttpConfigurer::disable)
 
-        http
-                // 🔹 1. Gestion des sessions
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .cors(cors -> cors.configurationSource(request -> {
+                    CorsConfiguration config = new CorsConfiguration();
+                    config.setAllowedOrigins(Collections.singletonList("http://localhost:4200"));
+                    config.setAllowedMethods(Collections.singletonList("*"));
+                    config.setAllowedHeaders(Collections.singletonList("*"));
+                    config.setExposedHeaders(Collections.singletonList("Authorization"));
+                    return config;
+                }))
+
+                .authorizeHttpRequests( requests -> requests
+
+                        // ✅ AJOUT : autoriser le login (sinon impossible de récupérer un token)
+                        .requestMatchers("/login").permitAll()
+
+                        // tes routes protégées
+                        .requestMatchers("/api/all/**").hasAnyAuthority("ADMIN","USER")
+                        .requestMatchers(HttpMethod.GET,"/api/getbyid/**").hasAnyAuthority("ADMIN","USER")
+                        .requestMatchers(HttpMethod.POST,"/api/addprod/**").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.PUT,"/api/updateprod/**").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE,"/api/delprod/**").hasAuthority("ADMIN")
+
+                        .anyRequest().authenticated()
                 )
-                // 👉 Pas de session côté serveur (mode JWT)
-                // chaque requête doit être authentifiée indépendamment
 
-                // 🔹 2. Désactivation CSRF
-                .csrf(csrf -> csrf.disable())
-                // 👉 inutile pour API REST (utilisé surtout avec cookies)
-
-                // 🔹 3. Gestion des autorisations
-                .authorizeHttpRequests(requests -> requests
-                                .requestMatchers("/login").permitAll()
-                                // 👉 route publique (pas besoin d’être connecté)
-                                .requestMatchers("/all").hasAuthority("ADMIN")
-
-                                .anyRequest().authenticated()
-                        // 👉 toutes les autres routes nécessitent une authentification
+                // ✅ AJOUT : filtre de login (génère le JWT)
+                .addFilterBefore(
+                        new JWTAuthenticationFilter(authenticationManager),
+                        UsernamePasswordAuthenticationFilter.class
                 )
-                .addFilterBefore(new JWTAuthenticationFilter(authenticationManager), UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(new JWTAuthorizationFilter(), UsernamePasswordAuthenticationFilter.class);
 
+                // ✅ déjà présent : vérifie le JWT
+                .addFilterBefore(
+                        new JWTAuthorizationFilter(),
+                        UsernamePasswordAuthenticationFilter.class
+                );
 
-        // 🔹 construit et retourne la configuration de sécurité
         return http.build();
     }
 }
