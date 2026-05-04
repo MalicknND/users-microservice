@@ -3,10 +3,12 @@ package org.msn.usersmicroservice.service;
 import jakarta.transaction.Transactional;
 import org.msn.usersmicroservice.entities.Role;
 import org.msn.usersmicroservice.entities.User;
+import org.msn.usersmicroservice.entities.VerificationToken;
 import org.msn.usersmicroservice.exceptions.EmailAlreadyExistsException;
 import org.msn.usersmicroservice.register.RegistrationRequest;
 import org.msn.usersmicroservice.repos.RoleRepository;
 import org.msn.usersmicroservice.repos.UserRepository;
+import org.msn.usersmicroservice.repos.VerificationTokenRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 
 @Transactional // veut dire q
 @Service
@@ -27,6 +30,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     BCryptPasswordEncoder bCryptPasswordEncoder;
+
+    @Autowired
+    VerificationTokenRepository verificationTokenRepository;
 
     @Override
     public User saveUser(User user) {
@@ -77,8 +83,19 @@ public class UserServiceImpl implements UserService {
         List<Role> roles = new ArrayList<>();
         roles.add(r);
         newUser.setRoles(roles);
+        userRepository.save(newUser);
 
+        //génére le code secret
+        String code = this.generateCode();
+        VerificationToken token = new VerificationToken(code, newUser);
+        verificationTokenRepository.save(token);
 
-        return userRepository.save(newUser);
+        return newUser;
+    }
+
+    private String generateCode() {
+        Random random = new Random();
+        Integer code = 100000 + random.nextInt(900000);
+        return code.toString();
     }
 }
