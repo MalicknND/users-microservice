@@ -2,7 +2,7 @@ package org.msn.usersmicroservice.security;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
-import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -29,59 +29,40 @@ import java.util.List;
 public class JWTAuthorizationFilter extends OncePerRequestFilter {
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-
-        // 🔹 1. Récupération du header Authorization
         String jwt = request.getHeader("Authorization");
 
-        // 🔹 2. Vérification du format du token
-        // Si le token est absent ou ne commence pas par "Bearer "
-        // on laisse passer la requête sans authentification
-        if (jwt == null || !jwt.startsWith(SecParams.PREFIX)) {
+        if (jwt == null || !jwt.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 🔹 3. Création du vérificateur JWT avec la clé secrète
-        JWTVerifier verifier = JWT
-                .require(Algorithm.HMAC256(SecParams.SECRET))
-                .build();
+        try {
+            // Utiliser l'algorithme centralisé de SecParams pour éviter les problèmes d'encodage
+            JWTVerifier verifier = JWT.require(SecParams.ALGORITHM).build();
 
-        // 🔹 4. Suppression du préfixe "Bearer "
-        jwt = jwt.substring(SecParams.PREFIX.length());
+            // Enlever le préfixe "Bearer " du JWT
+            jwt = jwt.substring(7); // 7 caractères dans "Bearer "
 
-        // 🔹 5. Vérification et décodage du token
-        // Vérifie signature + expiration
-        DecodedJWT decodedJWT = verifier.verify(jwt);
+            DecodedJWT decodedJWT = verifier.verify(jwt);
+            String username = decodedJWT.getSubject();
+            List<String> roles = decodedJWT.getClaims().get("roles").asList(String.class);
 
-        // 🔹 6. Extraction du username (subject)
-        String username = decodedJWT.getSubject();
+            Collection<GrantedAuthority> authorities = new ArrayList<>();
+            for (String r : roles) {
+                authorities.add(new SimpleGrantedAuthority(r));
+            }
 
-        // 🔹 7. Extraction des rôles depuis le token
-        List<String> roles = decodedJWT
-                .getClaims()
-                .get("roles")
-                .asList(String.class);
+            UsernamePasswordAuthenticationToken user =
+                    new UsernamePasswordAuthenticationToken(username, null, authorities);
 
-        // 🔹 8. Conversion des rôles en authorities Spring Security
-        Collection<GrantedAuthority> authorities = new ArrayList<>();
-        for (String r : roles) {
-            authorities.add(new SimpleGrantedAuthority(r));
+            SecurityContextHolder.getContext().setAuthentication(user);
+        } catch (JWTVerificationException e) {
+            // Log ou gestion de l'erreur - le JWT est invalide
+            System.err.println("Token JWT invalide: " + e.getMessage());
         }
 
-        // 🔹 9. Création de l'objet d'authentification
-        // password = null car déjà authentifié via JWT
-        UsernamePasswordAuthenticationToken user =
-                new UsernamePasswordAuthenticationToken(username, null, authorities);
-
-        // 🔥 10. Injection dans le contexte de sécurité
-        // Permet à Spring de considérer l’utilisateur comme connecté
-        SecurityContextHolder.getContext().setAuthentication(user);
-
-        // 🔹 11. Continuer la chaîne de filtres (vers le controller)
         filterChain.doFilter(request, response);
     }
 }

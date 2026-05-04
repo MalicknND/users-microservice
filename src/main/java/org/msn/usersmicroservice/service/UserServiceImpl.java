@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Transactional // veut dire q
 @Service
 public class UserServiceImpl implements UserService {
@@ -46,5 +48,10 @@ public class UserServiceImpl implements UserService {
         user.getRoles().add(role);
 //        userRepository.save(user); on a mis @Transactional pour eviter de faire le save a chaque fois
         return user;
+    }
+
+    @Override
+    public List<User> findAllUsers() {
+        return userRepository.findAll();
     }
 }

@@ -39,6 +39,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(requests -> requests
                                 .requestMatchers("/login").permitAll()
                                 // 👉 route publique (pas besoin d’être connecté)
+                                .requestMatchers("/all").hasAuthority("ADMIN")
 
                                 .anyRequest().authenticated()
                         // 👉 toutes les autres routes nécessitent une authentification

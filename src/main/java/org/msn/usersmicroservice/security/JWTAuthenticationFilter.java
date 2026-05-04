@@ -15,7 +15,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -67,7 +66,7 @@ public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilte
                 withSubject(springUser.getUsername()).
                 withArrayClaim("roles", roles.toArray(new String[roles.size()])).
                 withExpiresAt(new Date(System.currentTimeMillis()+SecParams.EXP_TIME)).
-                sign(Algorithm.HMAC256(SecParams.SECRET));
+                sign(SecParams.ALGORITHM);
 
         response.addHeader("Authorization", jwt);
 
@@ -76,4 +75,3 @@ public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilte
     }
 
 }
-
