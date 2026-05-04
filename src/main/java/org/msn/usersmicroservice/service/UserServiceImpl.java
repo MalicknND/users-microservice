@@ -3,13 +3,17 @@ package org.msn.usersmicroservice.service;
 import jakarta.transaction.Transactional;
 import org.msn.usersmicroservice.entities.Role;
 import org.msn.usersmicroservice.entities.User;
+import org.msn.usersmicroservice.exceptions.EmailAlreadyExistsException;
+import org.msn.usersmicroservice.register.RegistrationRequest;
 import org.msn.usersmicroservice.repos.RoleRepository;
 import org.msn.usersmicroservice.repos.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Transactional // veut dire q
 @Service
@@ -53,5 +57,28 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<User> findAllUsers() {
         return userRepository.findAll();
+    }
+
+    @Override
+    public User registerUser(RegistrationRequest request) {
+        Optional<User> optionalUser = userRepository.findByEmail(request.getEmail());
+        if (optionalUser.isPresent()) {
+            throw new EmailAlreadyExistsException("Email déja existant");
+        }
+
+        User newUser = new User();
+        newUser.setUsername(request.getUsername());
+        newUser.setEmail(request.getEmail());
+        newUser.setPassword(bCryptPasswordEncoder.encode(request.getPassword()));
+        newUser.setEnabled(false);
+        userRepository.save(newUser);
+//ajouter à newUser le role par défaut USER
+        Role r = roleRepository.findByRole("USER");
+        List<Role> roles = new ArrayList<>();
+        roles.add(r);
+        newUser.setRoles(roles);
+
+
+        return userRepository.save(newUser);
     }
 }

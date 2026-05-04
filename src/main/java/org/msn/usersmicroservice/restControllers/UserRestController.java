@@ -1,11 +1,11 @@
 package org.msn.usersmicroservice.restControllers;
 
 import org.msn.usersmicroservice.entities.User;
+import org.msn.usersmicroservice.register.RegistrationRequest;
+import org.msn.usersmicroservice.repos.UserRepository;
 import org.msn.usersmicroservice.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -15,8 +15,16 @@ public class UserRestController {
     @Autowired
     UserService userService;
 
+    @Autowired
+    UserRepository userRepository;
+
     @GetMapping("/all")
     public List<User> getAllUsers() {
-        return userService.findAllUsers();
+        return userRepository.findAll();
+    }
+
+    @PostMapping("/register")
+    public User register(@RequestBody RegistrationRequest request) {
+        return userService.registerUser(request);
     }
 }

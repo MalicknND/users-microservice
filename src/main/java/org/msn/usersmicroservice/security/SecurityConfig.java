@@ -42,7 +42,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests( requests -> requests
 
                         // ✅ AJOUT : autoriser le login (sinon impossible de récupérer un token)
-                        .requestMatchers("/login").permitAll()
+                        .requestMatchers("/login", "/register").permitAll()
 
                         // tes routes protégées
                         .requestMatchers("/api/all/**").hasAnyAuthority("ADMIN","USER")
