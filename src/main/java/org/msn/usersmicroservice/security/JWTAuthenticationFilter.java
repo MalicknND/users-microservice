@@ -1,15 +1,17 @@
 package org.msn.usersmicroservice.security;
 
 import org.msn.usersmicroservice.entities.User;
+
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.io.PrintWriter;
+import java.util.*;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -19,11 +21,10 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilter{
+public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
 
     private AuthenticationManager authenticationManager;
-
 
 
     public JWTAuthenticationFilter(AuthenticationManager authenticationManager) {
@@ -35,7 +36,7 @@ public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilte
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
             throws AuthenticationException {
 
-        User user =null;
+        User user = null;
         try {
             user = new ObjectMapper().readValue(request.getInputStream(), User.class);
         } catch (JsonParseException e) {
@@ -47,7 +48,7 @@ public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         }
 
         return authenticationManager.
-                authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(),user.getPassword()));
+                authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
     }
 
     @Override
@@ -58,20 +59,37 @@ public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilte
                 (org.springframework.security.core.userdetails.User) authResult.getPrincipal();
 
         List<String> roles = new ArrayList<>();
-        springUser.getAuthorities().forEach(au-> {
+        springUser.getAuthorities().forEach(au -> {
             roles.add(au.getAuthority());
         });
 
         String jwt = JWT.create().
                 withSubject(springUser.getUsername()).
                 withArrayClaim("roles", roles.toArray(new String[roles.size()])).
-                withExpiresAt(new Date(System.currentTimeMillis()+SecParams.EXP_TIME)).
+                withExpiresAt(new Date(System.currentTimeMillis() + SecParams.EXP_TIME)).
                 sign(SecParams.ALGORITHM);
 
         response.addHeader("Authorization", jwt);
 
+    }
 
-
+    @Override
+    protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed)
+            throws IOException, ServletException {
+        if (failed instanceof DisabledException) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json");
+            Map<String, Object> data = new HashMap<>();
+            data.put("errorCause", "disabled");
+            data.put("message", "L'utilisateur est désactivé !");
+            ObjectMapper objectMapper = new ObjectMapper();
+            String json = objectMapper.writeValueAsString(data);
+            PrintWriter writer = response.getWriter();
+            writer.println(json);
+            writer.flush();
+        } else {
+            super.unsuccessfulAuthentication(request, response, failed);
+        }
     }
 
 }

@@ -44,6 +44,10 @@ public class MyUserDetailsService implements UserDetailsService {
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),   // username
                 user.getPassword(),   // password (déjà hashé)
+                user.getEnabled(),
+                true,
+                true,
+                true,
                 auths                 // rôles / permissions
         );
     }
