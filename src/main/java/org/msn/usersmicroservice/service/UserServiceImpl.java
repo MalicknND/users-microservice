@@ -5,18 +5,17 @@ import org.msn.usersmicroservice.entities.Role;
 import org.msn.usersmicroservice.entities.User;
 import org.msn.usersmicroservice.entities.VerificationToken;
 import org.msn.usersmicroservice.exceptions.EmailAlreadyExistsException;
+import org.msn.usersmicroservice.exceptions.InvalidTokenException;
 import org.msn.usersmicroservice.register.RegistrationRequest;
 import org.msn.usersmicroservice.repos.RoleRepository;
 import org.msn.usersmicroservice.repos.UserRepository;
 import org.msn.usersmicroservice.repos.VerificationTokenRepository;
+import org.msn.usersmicroservice.util.EmailSender;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 
 @Transactional // veut dire q
 @Service
@@ -33,6 +32,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     VerificationTokenRepository verificationTokenRepository;
+
+    @Autowired
+    EmailSender emailSender;
 
     @Override
     public User saveUser(User user) {
@@ -90,7 +92,35 @@ public class UserServiceImpl implements UserService {
         VerificationToken token = new VerificationToken(code, newUser);
         verificationTokenRepository.save(token);
 
-        return newUser;
+        //envoyer par email pour valider l'email de l'utilisateur
+        sendEmailUser(newUser,token.getToken());
+
+        return userRepository.save(newUser);
+    }
+
+    @Override
+    public void sendEmailUser(User u, String code) {
+        String emailBody ="Bonjour "+ "<h1>"+u.getUsername() +"</h1>" +
+                " Votre code de validation est "+"<h1>"+code+"</h1>";
+        emailSender.sendEmail(u.getEmail(), emailBody);
+    }
+
+    @Override
+    public User validateToken(String code) {
+        VerificationToken token = verificationTokenRepository.findByToken(code);
+        if (token == null) {
+            throw new InvalidTokenException("Invalid Token");
+        }
+
+        User user = token.getUser();
+        Calendar calendar = Calendar.getInstance();
+        if (token.getExpirationTime().getTime() - calendar.getTime().getTime() <= 0) {
+            verificationTokenRepository.delete(token);
+            throw new InvalidTokenException("Invalid Token");
+        }
+        user.setEnabled(true);
+        userRepository.save(user);
+        return user;
     }
 
     private String generateCode() {
@@ -98,4 +128,7 @@ public class UserServiceImpl implements UserService {
         Integer code = 100000 + random.nextInt(900000);
         return code.toString();
     }
+
+
+
 }
